@@ -1,0 +1,69 @@
+#include <OneWire.h>
+#include "spark-dallas-temperature.h"
+
+int led = D7;  // The on-board LED
+bool CanSend = false;
+double Temp = 0.0;
+int tempSensorPin = D2;
+
+
+OneWire oneWire(tempSensorPin);
+DallasTemperature sensors(&oneWire);
+
+void setup() 
+{
+    sensors.begin();
+    Particle.variable("tempc", Temp);
+    RGB.control(true);
+    Particle.publish("SEND_EMAIL", PRIVATE);
+    // red, green, blue, 0-255
+    //RGB.color(0, 0, 0); 
+
+}
+
+void loop() 
+{
+  sensors.requestTemperatures();
+  double tempCheck = sensors.getTempCByIndex(0);
+
+  
+  if ( tempCheck > -50 && tempCheck < 110)
+  {
+    Temp = tempCheck;
+  }
+  
+  Particle.publish("temp", String(Temp));
+
+  if ( Temp <= 29)
+  {
+      RGB.color(100, 100, 100);
+  }
+  else if (Temp >= 30 && Temp < 45)
+  {
+      RGB.color(0, 0,255);
+  }
+  else if (Temp >= 45 && Temp <= 60 )
+  {
+      RGB.color(0, 255, 0);
+  }
+
+  
+  if (Temp > 61)
+  {
+      CanSend = true;
+      digitalWrite(led, HIGH);                          //Secondary LED "on" means an email may be sent
+      RGB.color(255, 0, 0);
+  }
+  
+  if (Temp < 60 && CanSend == true)
+  {
+
+      digitalWrite(led, LOW);                           //Secondary LED "off" means an email has been sent
+      //Particle.publish("SEND_EMAIL", String(Temp), PRIVATE);          //Sends Email to t_skads@hotmail.com
+      Particle.publish("SEND_EMAIL", PRIVATE);
+      CanSend = false;
+  }
+
+
+  delay(5000);
+}
